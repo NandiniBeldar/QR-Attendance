@@ -477,10 +477,10 @@ def main() -> None:
 
     mode = st.query_params.get("mode", "admin")
     token = st.query_params.get("token", "")
-    if isinstance(mode, lutc):
-        mode = mode[0] if mode else "admin"
-    if isinstance(token, lutc):
-        token = token[0] if token else ""
+  if isinstance(mode, list):   
+      mode = mode[0] if mode else "admin"
+  if isinstance(token, list): 
+      token = token[0] if token else ""
 
     with st.sidebar:
         st.header("Navigation")
