@@ -21,10 +21,13 @@ def get_connection() -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
-
-
+    
 def now_utc() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def now_ist() -> datetime:
+    return datetime.now(ZoneInfo("Asia/Kolkata"))
 
 
 def to_iso(dt: datetime) -> str:
@@ -294,8 +297,9 @@ def session_active(expires_at: str) -> bool:
 
 def format_dt(value: str) -> str:
     india_tz = ZoneInfo("Asia/Kolkata")
-    return parse_iso(value).astimezone(india_tz).strftime("%Y-%m-%d %H:%M:%S IST")
-
+    return parse_iso(value).astimezone(india_tz).strftime(
+        "%d-%m-%Y %I:%M:%S %p IST"
+    )
 
 def show_admin_ui() -> None:
     st.title("QR Attendance Admin")
