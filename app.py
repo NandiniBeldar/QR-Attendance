@@ -21,8 +21,8 @@ def get_connection() -> sqlite3.Connection:
     return conn
 
 
-def now_ist() -> datetime:
-    return datetime.now(timezone.ist)
+def now_utc() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 def to_iso(dt: datetime) -> str:
