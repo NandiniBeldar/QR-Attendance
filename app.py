@@ -12,6 +12,7 @@ import streamlit as st
 
 
 DB_PATH = Path("attendance.db")
+IST = timezone(timedelta(hours=5, minutes=30), name="IST")
 
 
 def get_connection() -> sqlite3.Connection:
@@ -21,12 +22,12 @@ def get_connection() -> sqlite3.Connection:
     return conn
 
 
-def now_utc() -> datetime:
-    return datetime.now(timezone.utc)
+def now_ist() -> datetime:
+    return datetime.now(IST)
 
 
 def to_iso(dt: datetime) -> str:
-    return dt.astimezone(timezone.utc).isoformat()
+    return dt.astimezone(IST).isoformat()
 
 
 def parse_iso(value: str) -> datetime:
@@ -99,7 +100,7 @@ def register_admin(email: str, password: str) -> None:
     try:
         conn.execute(
             "INSERT INTO admins (email, password_hash, created_at) VALUES (?, ?, ?)",
-            (norm_email, hash_password(password), to_iso(now_utc())),
+            (norm_email, hash_password(password), to_iso(now_ist())),
         )
         conn.commit()
     except sqlite3.IntegrityError as exc:
@@ -129,7 +130,7 @@ def create_session(admin_id: int, title: str, duration_minutes: int) -> dict:
     if duration_minutes < 1 or duration_minutes > 1440:
         raise ValueError("Duration must be between 1 and 1440 minutes.")
 
-    created_at = now_utc()
+    created_at = now_ist()
     expires_at = created_at + timedelta(minutes=duration_minutes)
     token = secrets.token_hex(24)
 
@@ -222,7 +223,7 @@ def check_in(token: str, student_identifier: str, student_name: str) -> dict:
         raise ValueError("Invalid or unknown QR token.")
 
     expires_at = parse_iso(session["expires_at"])
-    if expires_at <= now_utc():
+    if expires_at <= now_ist():
         raise TimeoutError("This attendance window has expired.")
 
     norm_id = student_identifier.strip().lower()
@@ -241,7 +242,7 @@ def check_in(token: str, student_identifier: str, student_name: str) -> dict:
                 session["id"],
                 norm_id,
                 clean_name if clean_name else None,
-                to_iso(now_utc()),
+                to_iso(now_ist()),
             ),
         )
         conn.commit()
@@ -274,7 +275,7 @@ def get_default_base_url() -> str:
     custom = normalize_base_url(os.getenv("PUBLIC_BASE_URL", ""))
     if custom:
         return custom
-    return "https://qr-code-attendance.streamlit.app"
+    return "https://your-app-name.streamlit.app"
 
 
 def get_base_url() -> str:
@@ -285,11 +286,11 @@ def get_base_url() -> str:
 
 
 def session_active(expires_at: str) -> bool:
-    return parse_iso(expires_at) > now_utc()
+    return parse_iso(expires_at) > now_ist()
 
 
 def format_dt(value: str) -> str:
-    return parse_iso(value).astimezone().strftime("%Y-%m-%d %H:%M:%S")
+    return parse_iso(value).astimezone(IST).strftime("%Y-%m-%d %H:%M:%S IST")
 
 
 def show_admin_ui() -> None:
@@ -347,10 +348,10 @@ def show_admin_ui() -> None:
     st.text_input(
         "Public app URL",
         key="base_url",
-        help="Example: https://qr-code-attendance.streamlit.app or http://192.168.1.5:8501",
+        help="Example: https://your-app-name.streamlit.app or http://192.168.1.5:8501",
     )
     current_base_url = normalize_base_url(st.session_state.get("base_url", ""))
-    if "qr-code-attendance.streamlit.app" in current_base_url:
+    if "your-app-name.streamlit.app" in current_base_url:
         st.warning(
             "Update the Public app URL above before sharing QR. "
             "The current value is a placeholder and will not open on phones."
@@ -438,7 +439,7 @@ def show_student_ui(token: str) -> None:
         st.error("Invalid or unknown QR token.")
         return
 
-    if parse_iso(session["expires_at"]) <= now_utc():
+    if parse_iso(session["expires_at"]) <= now_ist():
         st.warning("This attendance window has expired.")
         return
 
