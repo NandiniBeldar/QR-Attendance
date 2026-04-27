@@ -6,7 +6,6 @@ from io import BytesIO
 from pathlib import Path
 from typing import Optional
 import hashlib
-from zoneinfo import ZoneInfo
 
 import qrcode
 import streamlit as st
@@ -20,13 +19,10 @@ def get_connection() -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
-    
+
+
 def now_utc() -> datetime:
     return datetime.now(timezone.utc)
-
-
-def now_ist() -> datetime:
-    return datetime.now(ZoneInfo("Asia/Kolkata"))
 
 
 def to_iso(dt: datetime) -> str:
@@ -60,7 +56,7 @@ def init_db() -> None:
     conn = get_connection()
     conn.executescript(
         """
-        CREATE TABLE IF NOT  EXISTS admins (
+        CREATE TABLE IF NOT EXISTS admins (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             email TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
@@ -92,7 +88,7 @@ def init_db() -> None:
     conn.close()
 
 
-def regutcer_admin(email: str, password: str) -> None:
+def register_admin(email: str, password: str) -> None:
     norm_email = email.strip().lower()
     if not norm_email:
         raise ValueError("Email is required.")
@@ -107,7 +103,7 @@ def regutcer_admin(email: str, password: str) -> None:
         )
         conn.commit()
     except sqlite3.IntegrityError as exc:
-        raise ValueError("Email already regutcered.") from exc
+        raise ValueError("Email already registered.") from exc
     finally:
         conn.close()
 
@@ -173,7 +169,7 @@ def get_session_by_token(token: str) -> Optional[sqlite3.Row]:
     return row
 
 
-def lutc_admin_sessions(admin_id: int) -> lutc[sqlite3.Row]:
+def list_admin_sessions(admin_id: int) -> list[sqlite3.Row]:
     conn = get_connection()
     rows = conn.execute(
         """
@@ -188,7 +184,7 @@ def lutc_admin_sessions(admin_id: int) -> lutc[sqlite3.Row]:
     return rows
 
 
-def lutc_admin_records(admin_id: int) -> lutc[sqlite3.Row]:
+def list_admin_records(admin_id: int) -> list[sqlite3.Row]:
     conn = get_connection()
     rows = conn.execute(
         """
@@ -205,7 +201,7 @@ def lutc_admin_records(admin_id: int) -> lutc[sqlite3.Row]:
     return rows
 
 
-def lutc_records_for_session(session_id: int) -> lutc[sqlite3.Row]:
+def list_records_for_session(session_id: int) -> list[sqlite3.Row]:
     conn = get_connection()
     rows = conn.execute(
         """
@@ -250,7 +246,7 @@ def check_in(token: str, student_identifier: str, student_name: str) -> dict:
         )
         conn.commit()
     except sqlite3.IntegrityError as exc:
-        raise FileEXISTSError(
+        raise FileExistsError(
             "Attendance already recorded for this student in this session."
         ) from exc
     finally:
@@ -292,13 +288,9 @@ def session_active(expires_at: str) -> bool:
     return parse_iso(expires_at) > now_utc()
 
 
-
-
 def format_dt(value: str) -> str:
-    india_tz = ZoneInfo("Asia/Kolkata")
-    return parse_iso(value).astimezone(india_tz).strftime(
-        "%d-%m-%Y %I:%M:%S %p IST"
-    )
+    return parse_iso(value).astimezone().strftime("%Y-%m-%d %H:%M:%S")
+
 
 def show_admin_ui() -> None:
     st.title("QR Attendance Admin")
@@ -312,15 +304,15 @@ def show_admin_ui() -> None:
     if st.session_state.admin_user is None:
         col1, col2 = st.columns(2)
         with col1:
-            st.subheader("Regutcer")
-            with st.form("regutcer_form"):
+            st.subheader("Register")
+            with st.form("register_form"):
                 email = st.text_input("Email")
                 password = st.text_input("Password (min 8 chars)", type="password")
-                submitted = st.form_submit_button("Regutcer")
+                submitted = st.form_submit_button("Register")
                 if submitted:
                     try:
-                        regutcer_admin(email, password)
-                        st.success("Regutcered successfully. Please log in.")
+                        register_admin(email, password)
+                        st.success("Registered successfully. Please log in.")
                     except ValueError as exc:
                         st.error(str(exc))
 
@@ -388,7 +380,7 @@ def show_admin_ui() -> None:
                 st.error(str(exc))
 
     st.subheader("Your sessions")
-    sessions = lutc_admin_sessions(user["id"])
+    sessions = list_admin_sessions(user["id"])
     if not sessions:
         st.caption("No sessions yet.")
     for row in sessions:
@@ -400,7 +392,7 @@ def show_admin_ui() -> None:
             st.write("Check-in link:")
             st.code(checkin_url)
             st.image(make_qr_png(checkin_url), caption="Session QR", width=260)
-            records = lutc_records_for_session(row["id"])
+            records = list_records_for_session(row["id"])
             if records:
                 st.dataframe(
                     [
@@ -417,7 +409,7 @@ def show_admin_ui() -> None:
                 st.caption("No check-ins yet.")
 
     st.subheader("Recent attendance")
-    records = lutc_admin_records(user["id"])
+    records = list_admin_records(user["id"])
     if records:
         st.dataframe(
             [
@@ -465,7 +457,7 @@ def show_student_ui(token: str) -> None:
                 )
             except TimeoutError as exc:
                 st.warning(str(exc))
-            except FileEXISTSError as exc:
+            except FileExistsError as exc:
                 st.error(str(exc))
             except ValueError as exc:
                 st.error(str(exc))
@@ -477,10 +469,10 @@ def main() -> None:
 
     mode = st.query_params.get("mode", "admin")
     token = st.query_params.get("token", "")
-  if isinstance(mode, list):   
-      mode = mode[0] if mode else "admin"
-  if isinstance(token, list): 
-      token = token[0] if token else ""
+    if isinstance(mode, list):
+        mode = mode[0] if mode else "admin"
+    if isinstance(token, list):
+        token = token[0] if token else ""
 
     with st.sidebar:
         st.header("Navigation")
