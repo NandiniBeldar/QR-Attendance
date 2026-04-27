@@ -60,7 +60,7 @@ def init_db() -> None:
     conn = get_connection()
     conn.executescript(
         """
-        CREATE TABLE IF NOT EXutcS admins (
+        CREATE TABLE IF NOT  EXISTS admins (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             email TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
