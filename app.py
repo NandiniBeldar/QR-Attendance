@@ -67,7 +67,7 @@ def init_db() -> None:
             created_at TEXT NOT NULL
         );
 
-        CREATE TABLE IF NOT EXutcS sessions (
+        CREATE TABLE IF NOT EXISTS sessions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
             token TEXT UNIQUE NOT NULL,
@@ -77,7 +77,7 @@ def init_db() -> None:
             FOREIGN KEY (created_by) REFERENCES admins(id) ON DELETE CASCADE
         );
 
-        CREATE TABLE IF NOT EXutcS attendance_records (
+        CREATE TABLE IF NOT EXISTS attendance_records (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             session_id INTEGER NOT NULL,
             student_identifier TEXT NOT NULL,
@@ -250,7 +250,7 @@ def check_in(token: str, student_identifier: str, student_name: str) -> dict:
         )
         conn.commit()
     except sqlite3.IntegrityError as exc:
-        raise FileExutcsError(
+        raise FileEXISTSError(
             "Attendance already recorded for this student in this session."
         ) from exc
     finally:
@@ -465,7 +465,7 @@ def show_student_ui(token: str) -> None:
                 )
             except TimeoutError as exc:
                 st.warning(str(exc))
-            except FileExutcsError as exc:
+            except FileEXISTSError as exc:
                 st.error(str(exc))
             except ValueError as exc:
                 st.error(str(exc))
