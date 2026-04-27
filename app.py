@@ -21,12 +21,12 @@ def get_connection() -> sqlite3.Connection:
     return conn
 
 
-def now_utc() -> datetime:
-    return datetime.now(timezone.utc)
+def now_ist() -> datetime:
+    return datetime.now(timezone.ist)
 
 
 def to_iso(dt: datetime) -> str:
-    return dt.astimezone(timezone.utc).isoformat()
+    return dt.astimezone(timezone.ist).isoformat()
 
 
 def parse_iso(value: str) -> datetime:
@@ -99,7 +99,7 @@ def register_admin(email: str, password: str) -> None:
     try:
         conn.execute(
             "INSERT INTO admins (email, password_hash, created_at) VALUES (?, ?, ?)",
-            (norm_email, hash_password(password), to_iso(now_utc())),
+            (norm_email, hash_password(password), to_iso(now_ist())),
         )
         conn.commit()
     except sqlite3.IntegrityError as exc:
@@ -129,7 +129,7 @@ def create_session(admin_id: int, title: str, duration_minutes: int) -> dict:
     if duration_minutes < 1 or duration_minutes > 1440:
         raise ValueError("Duration must be between 1 and 1440 minutes.")
 
-    created_at = now_utc()
+    created_at = now_ist()
     expires_at = created_at + timedelta(minutes=duration_minutes)
     token = secrets.token_hex(24)
 
@@ -222,7 +222,7 @@ def check_in(token: str, student_identifier: str, student_name: str) -> dict:
         raise ValueError("Invalid or unknown QR token.")
 
     expires_at = parse_iso(session["expires_at"])
-    if expires_at <= now_utc():
+    if expires_at <= now_ist():
         raise TimeoutError("This attendance window has expired.")
 
     norm_id = student_identifier.strip().lower()
@@ -241,7 +241,7 @@ def check_in(token: str, student_identifier: str, student_name: str) -> dict:
                 session["id"],
                 norm_id,
                 clean_name if clean_name else None,
-                to_iso(now_utc()),
+                to_iso(now_ist()),
             ),
         )
         conn.commit()
@@ -285,7 +285,7 @@ def get_base_url() -> str:
 
 
 def session_active(expires_at: str) -> bool:
-    return parse_iso(expires_at) > now_utc()
+    return parse_iso(expires_at) > now_ist()
 
 
 def format_dt(value: str) -> str:
@@ -438,7 +438,7 @@ def show_student_ui(token: str) -> None:
         st.error("Invalid or unknown QR token.")
         return
 
-    if parse_iso(session["expires_at"]) <= now_utc():
+    if parse_iso(session["expires_at"]) <= now_ist():
         st.warning("This attendance window has expired.")
         return
 
