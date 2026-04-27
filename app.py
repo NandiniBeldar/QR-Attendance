@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Optional
 import hashlib
 from zoneinfo import ZoneInfo
-import pytz
 
 import qrcode
 import streamlit as st
