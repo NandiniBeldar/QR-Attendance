@@ -6,6 +6,8 @@ from io import BytesIO
 from pathlib import Path
 from typing import Optional
 import hashlib
+from zoneinfo import ZoneInfo
+import pytz
 
 import qrcode
 import streamlit as st
@@ -21,12 +23,12 @@ def get_connection() -> sqlite3.Connection:
     return conn
 
 
-def now_ist() -> datetime:
-    return datetime.now(timezone.ist)
+def now_utc() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 def to_iso(dt: datetime) -> str:
-    return dt.astimezone(timezone.ist).isoformat()
+    return dt.astimezone(timezone.utc).isoformat()
 
 
 def parse_iso(value: str) -> datetime:
@@ -56,14 +58,14 @@ def init_db() -> None:
     conn = get_connection()
     conn.executescript(
         """
-        CREATE TABLE IF NOT EXISTS admins (
+        CREATE TABLE IF NOT EXutcS admins (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             email TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
             created_at TEXT NOT NULL
         );
 
-        CREATE TABLE IF NOT EXISTS sessions (
+        CREATE TABLE IF NOT EXutcS sessions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
             token TEXT UNIQUE NOT NULL,
@@ -73,7 +75,7 @@ def init_db() -> None:
             FOREIGN KEY (created_by) REFERENCES admins(id) ON DELETE CASCADE
         );
 
-        CREATE TABLE IF NOT EXISTS attendance_records (
+        CREATE TABLE IF NOT EXutcS attendance_records (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             session_id INTEGER NOT NULL,
             student_identifier TEXT NOT NULL,
@@ -88,7 +90,7 @@ def init_db() -> None:
     conn.close()
 
 
-def register_admin(email: str, password: str) -> None:
+def regutcer_admin(email: str, password: str) -> None:
     norm_email = email.strip().lower()
     if not norm_email:
         raise ValueError("Email is required.")
@@ -99,11 +101,11 @@ def register_admin(email: str, password: str) -> None:
     try:
         conn.execute(
             "INSERT INTO admins (email, password_hash, created_at) VALUES (?, ?, ?)",
-            (norm_email, hash_password(password), to_iso(now_ist())),
+            (norm_email, hash_password(password), to_iso(now_utc())),
         )
         conn.commit()
     except sqlite3.IntegrityError as exc:
-        raise ValueError("Email already registered.") from exc
+        raise ValueError("Email already regutcered.") from exc
     finally:
         conn.close()
 
@@ -129,7 +131,7 @@ def create_session(admin_id: int, title: str, duration_minutes: int) -> dict:
     if duration_minutes < 1 or duration_minutes > 1440:
         raise ValueError("Duration must be between 1 and 1440 minutes.")
 
-    created_at = now_ist()
+    created_at = now_utc()
     expires_at = created_at + timedelta(minutes=duration_minutes)
     token = secrets.token_hex(24)
 
@@ -169,7 +171,7 @@ def get_session_by_token(token: str) -> Optional[sqlite3.Row]:
     return row
 
 
-def list_admin_sessions(admin_id: int) -> list[sqlite3.Row]:
+def lutc_admin_sessions(admin_id: int) -> lutc[sqlite3.Row]:
     conn = get_connection()
     rows = conn.execute(
         """
@@ -184,7 +186,7 @@ def list_admin_sessions(admin_id: int) -> list[sqlite3.Row]:
     return rows
 
 
-def list_admin_records(admin_id: int) -> list[sqlite3.Row]:
+def lutc_admin_records(admin_id: int) -> lutc[sqlite3.Row]:
     conn = get_connection()
     rows = conn.execute(
         """
@@ -201,7 +203,7 @@ def list_admin_records(admin_id: int) -> list[sqlite3.Row]:
     return rows
 
 
-def list_records_for_session(session_id: int) -> list[sqlite3.Row]:
+def lutc_records_for_session(session_id: int) -> lutc[sqlite3.Row]:
     conn = get_connection()
     rows = conn.execute(
         """
@@ -222,7 +224,7 @@ def check_in(token: str, student_identifier: str, student_name: str) -> dict:
         raise ValueError("Invalid or unknown QR token.")
 
     expires_at = parse_iso(session["expires_at"])
-    if expires_at <= now_ist():
+    if expires_at <= now_utc():
         raise TimeoutError("This attendance window has expired.")
 
     norm_id = student_identifier.strip().lower()
@@ -241,12 +243,12 @@ def check_in(token: str, student_identifier: str, student_name: str) -> dict:
                 session["id"],
                 norm_id,
                 clean_name if clean_name else None,
-                to_iso(now_ist()),
+                to_iso(now_utc()),
             ),
         )
         conn.commit()
     except sqlite3.IntegrityError as exc:
-        raise FileExistsError(
+        raise FileExutcsError(
             "Attendance already recorded for this student in this session."
         ) from exc
     finally:
@@ -285,11 +287,14 @@ def get_base_url() -> str:
 
 
 def session_active(expires_at: str) -> bool:
-    return parse_iso(expires_at) > now_ist()
+    return parse_iso(expires_at) > now_utc()
+
+
 
 
 def format_dt(value: str) -> str:
-    return parse_iso(value).astimezone().strftime("%Y-%m-%d %H:%M:%S")
+    india_tz = ZoneInfo("Asia/Kolkata")
+    return parse_iso(value).astimezone(india_tz).strftime("%Y-%m-%d %H:%M:%S IST")
 
 
 def show_admin_ui() -> None:
@@ -304,15 +309,15 @@ def show_admin_ui() -> None:
     if st.session_state.admin_user is None:
         col1, col2 = st.columns(2)
         with col1:
-            st.subheader("Register")
-            with st.form("register_form"):
+            st.subheader("Regutcer")
+            with st.form("regutcer_form"):
                 email = st.text_input("Email")
                 password = st.text_input("Password (min 8 chars)", type="password")
-                submitted = st.form_submit_button("Register")
+                submitted = st.form_submit_button("Regutcer")
                 if submitted:
                     try:
-                        register_admin(email, password)
-                        st.success("Registered successfully. Please log in.")
+                        regutcer_admin(email, password)
+                        st.success("Regutcered successfully. Please log in.")
                     except ValueError as exc:
                         st.error(str(exc))
 
@@ -380,7 +385,7 @@ def show_admin_ui() -> None:
                 st.error(str(exc))
 
     st.subheader("Your sessions")
-    sessions = list_admin_sessions(user["id"])
+    sessions = lutc_admin_sessions(user["id"])
     if not sessions:
         st.caption("No sessions yet.")
     for row in sessions:
@@ -392,7 +397,7 @@ def show_admin_ui() -> None:
             st.write("Check-in link:")
             st.code(checkin_url)
             st.image(make_qr_png(checkin_url), caption="Session QR", width=260)
-            records = list_records_for_session(row["id"])
+            records = lutc_records_for_session(row["id"])
             if records:
                 st.dataframe(
                     [
@@ -409,7 +414,7 @@ def show_admin_ui() -> None:
                 st.caption("No check-ins yet.")
 
     st.subheader("Recent attendance")
-    records = list_admin_records(user["id"])
+    records = lutc_admin_records(user["id"])
     if records:
         st.dataframe(
             [
@@ -438,7 +443,7 @@ def show_student_ui(token: str) -> None:
         st.error("Invalid or unknown QR token.")
         return
 
-    if parse_iso(session["expires_at"]) <= now_ist():
+    if parse_iso(session["expires_at"]) <= now_utc():
         st.warning("This attendance window has expired.")
         return
 
@@ -457,7 +462,7 @@ def show_student_ui(token: str) -> None:
                 )
             except TimeoutError as exc:
                 st.warning(str(exc))
-            except FileExistsError as exc:
+            except FileExutcsError as exc:
                 st.error(str(exc))
             except ValueError as exc:
                 st.error(str(exc))
@@ -469,9 +474,9 @@ def main() -> None:
 
     mode = st.query_params.get("mode", "admin")
     token = st.query_params.get("token", "")
-    if isinstance(mode, list):
+    if isinstance(mode, lutc):
         mode = mode[0] if mode else "admin"
-    if isinstance(token, list):
+    if isinstance(token, lutc):
         token = token[0] if token else ""
 
     with st.sidebar:
