@@ -274,7 +274,7 @@ def get_default_base_url() -> str:
     custom = normalize_base_url(os.getenv("PUBLIC_BASE_URL", ""))
     if custom:
         return custom
-    return "https://your-app-name.streamlit.app"
+    return "https://qr-code-attendance.streamlit.app"
 
 
 def get_base_url() -> str:
@@ -347,10 +347,10 @@ def show_admin_ui() -> None:
     st.text_input(
         "Public app URL",
         key="base_url",
-        help="Example: https://your-app-name.streamlit.app or http://192.168.1.5:8501",
+        help="Example: https://qr-code-attendance.streamlit.app or http://192.168.1.5:8501",
     )
     current_base_url = normalize_base_url(st.session_state.get("base_url", ""))
-    if "your-app-name.streamlit.app" in current_base_url:
+    if "qr-code-attendance.streamlit.app" in current_base_url:
         st.warning(
             "Update the Public app URL above before sharing QR. "
             "The current value is a placeholder and will not open on phones."
